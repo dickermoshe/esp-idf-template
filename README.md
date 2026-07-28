@@ -260,6 +260,27 @@ For other RISCV SOCs like e.g. ESP32-C6 you only need to change the `--target` t
 
 Using WSL2 does not exhibit [path length issues](https://github.com/esp-rs/esp-idf-sys/issues/252); furthermore, using WSL2 reduces the waiting time between command line cargo invocations and Rust Analyzer operating on the same projects.
 
+### Native Windows builds
+
+Projects generated on Windows use Cargo's separate
+[`build-dir`](https://doc.rust-lang.org/cargo/reference/build-cache.html) for
+intermediate artifacts:
+
+```text
+C:\e\<workspace-path-hash>
+```
+
+This keeps ESP-IDF's deeply nested CMake and build-script files close to the
+drive root while final artifacts remain in the project's normal `target`
+directory. The workspace hash prevents projects from sharing intermediate
+artifacts accidentally.
+
+This requires Cargo 1.91 or newer. If Windows does not allow Cargo to create
+`C:\e`, create it once from an elevated terminal and grant your user write
+access, or change `build-dir` in `.cargo/config.toml` to another short,
+physical directory. A `subst` drive, junction, or symlink is not sufficient
+because path canonicalization can reveal the original long path.
+
 ### Setup
 
 1. Follow the [WSL2 setup guide](https://learn.microsoft.com/en-us/windows/wsl/install) and the [WSL2 development environment setup guide](https://learn.microsoft.com/en-gb/windows/wsl/setup/environment#file-storage).

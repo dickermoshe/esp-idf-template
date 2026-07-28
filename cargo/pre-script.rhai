@@ -66,6 +66,12 @@ for key in target_properties.keys() {
     variable::set(key, target_properties.get(key));
 }
 
+// ESP-IDF's build tree can exceed the path length supported by some of its
+// Windows tools. Cargo 1.91+ lets us relocate only intermediate artifacts,
+// while keeping final artifacts in the project's regular target directory.
+let os_arch = variable::get("os-arch");
+variable::set("windows", os_arch.starts_with("windows-"));
+
 let advanced = variable::get("advanced");
 if !advanced {
     variable::set("espidfver", "v5.5.3");
