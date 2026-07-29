@@ -20,3 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed the generated GH CI by making sure `ldproxy`, `cargo fmt`, `cargo clippy` and rust src for `-Zbuild-std` are operational with the nightly toolchain (#253)
+- Keep native Windows build and managed ESP-IDF paths short enough for
+  `esp-idf-sys`, CMake, and `ldproxy`, and configure the default upstream LLVM
+  library path for RISC-V bindgen builds.

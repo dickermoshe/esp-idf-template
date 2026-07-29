@@ -209,11 +209,22 @@ See the [Installation chapter of The Rust on ESP Book](https://esp-rs.github.io/
 While you **can** target the RISC-V Espressif SOCs (`esp32-cXX` and `esp32-hXX`) with the `espup` installer just fine, SOCs with this architecture are also [supported by the nightly Rust compiler](https://esp-rs.github.io/book/installation/riscv.html) and by recent, stock Clang compilers (as in Clang 11+):
 
 * Install a recent Clang. See [Clang Getting Started page](https://clang.llvm.org/get_started.html) as it contains useful guidelines on installation. Recent Linux distros come with suitable Clang already.
+  On Windows, the official LLVM package can be installed with:
+   ```powershell
+   winget install --id LLVM.LLVM --exact
+   ```
+  Generated Windows RISC-V projects set `LIBCLANG_PATH` to the official
+  installer's default location, `C:\Program Files\LLVM\bin`. Update that value
+  in `.cargo/config.toml` if LLVM is installed elsewhere.
 * Install the `nightly` Rust toolchain with the `rust-src` component included:
    ```sh
    rustup toolchain install nightly --component rust-src
    ```
-* Run any Cargo command with the `nightly` [toolchain override](https://rust-lang.github.io/rustup/overrides.html#overrides), i.e. `cargo +nightly ...`.
+* Generated RISC-V projects pin `nightly` and `rust-src` in
+  `rust-toolchain.toml`, so ordinary `cargo` commands use the correct
+  toolchain automatically. Outside a generated project, use the `nightly`
+  [toolchain override](https://rust-lang.github.io/rustup/overrides.html#overrides),
+  i.e. `cargo +nightly ...`.
 
 ### Install Python3
 
@@ -267,13 +278,27 @@ Projects generated on Windows use Cargo's separate
 intermediate artifacts:
 
 ```text
-C:\e\<workspace-path-hash>
+C:\e\<project-id>
 ```
 
 This keeps ESP-IDF's deeply nested CMake and build-script files close to the
 drive root while final artifacts remain in the project's normal `target`
-directory. The workspace hash prevents projects from sharing intermediate
-artifacts accidentally.
+directory. The generated five-character project fingerprint prevents projects
+from sharing intermediate artifacts accidentally while keeping the complete
+build root within `esp-idf-sys`'s ten-character limit.
+
+The default managed ESP-IDF installation is also placed at:
+
+```text
+C:\e\idf
+```
+
+ESP-IDF repeats its installation path many times in `linker_args.txt`.
+Keeping that path short prevents `ldproxy` from expanding the response file
+into a command longer than Windows' 32,767-character process limit. The
+installation is shared safely: managed ESP-IDF and tool versions use separate
+subdirectories. Choosing the advanced `global` installation option preserves
+that choice instead.
 
 This requires Cargo 1.91 or newer. If Windows does not allow Cargo to create
 `C:\e`, create it once from an elevated terminal and grant your user write
