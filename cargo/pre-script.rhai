@@ -60,6 +60,33 @@ let targets = #{
     },
 };
 
+// Return a stable five-character base-36 fingerprint. Five characters are the
+// largest identifier that keeps `C:\e\<id>` within esp-idf-sys's ten-character
+// Windows build-root limit.
+fn compact_build_id(value) {
+    let alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+    let modulus = 60_466_176; // 36^5
+    let hash = 2_166_136_261 % modulus;
+
+    for character in value.to_lower() {
+        let character_value = alphabet.index_of(character);
+        if character_value < 0 {
+            character_value = 36;
+        }
+
+        hash = (hash * 131 + character_value + 1) % modulus;
+    }
+
+    let id = "";
+    for position in 0..5 {
+        let digit = hash % 36;
+        id = alphabet.sub_string(digit, 1) + id;
+        hash = hash / 36;
+    }
+
+    id
+}
+
 let target = variable::get("mcu");
 let target_properties = targets.get(target);
 for key in target_properties.keys() {
@@ -70,7 +97,13 @@ for key in target_properties.keys() {
 // Windows tools. Cargo 1.91+ lets us relocate only intermediate artifacts,
 // while keeping final artifacts in the project's regular target directory.
 let os_arch = variable::get("os-arch");
-variable::set("windows", os_arch.starts_with("windows-"));
+let windows = os_arch.starts_with("windows-");
+variable::set("windows", windows);
+if windows {
+    let project_identity =
+        `${env::destination_directory}|${variable::get("project-name")}`;
+    variable::set("short_build_id", compact_build_id(project_identity));
+}
 
 let advanced = variable::get("advanced");
 if !advanced {
@@ -80,3 +113,14 @@ if !advanced {
     variable::set("devcontainer", false);
     variable::set("wokwi", false);
 }
+
+// On Windows, ESP-IDF repeats its installation path throughout the final
+// linker response file. A workspace installation beneath a long project path
+// can push ldproxy past Windows' 32,767-character process-command limit.
+// Preserve an explicit advanced "global" choice, but give the default
+// workspace-scoped installation a short, shared physical path.
+let tools_install_dir = variable::get("installdir");
+if windows && tools_install_dir == "workspace" {
+    tools_install_dir = "custom:C:/e/idf";
+}
+variable::set("tools_install_dir", tools_install_dir);
