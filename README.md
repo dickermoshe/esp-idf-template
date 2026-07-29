@@ -14,7 +14,7 @@ This is the crate you get when running `cargo new`, but augmented with extra con
 Or if you rather
 * ... want to mix Rust and C/C++ in a traditional ESP-IDF `idf.py` CMake project - [follow these instructions](README-cmake.md)
 * ... want to mix Rust and C/C++ with PlatformIO - [follow these instructions](README-pio.md)
-* ... want to develop on Windows / WSL2 - [follow these instructions](#using-wsl2-on-windows)
+* ... want to develop on Windows - [follow these instructions](#developing-on-windows)
 
 For more check out the links in the additional [information section](#additional-information)
 
@@ -209,22 +209,10 @@ See the [Installation chapter of The Rust on ESP Book](https://esp-rs.github.io/
 While you **can** target the RISC-V Espressif SOCs (`esp32-cXX` and `esp32-hXX`) with the `espup` installer just fine, SOCs with this architecture are also [supported by the nightly Rust compiler](https://esp-rs.github.io/book/installation/riscv.html) and by recent, stock Clang compilers (as in Clang 11+):
 
 * Install a recent Clang. See [Clang Getting Started page](https://clang.llvm.org/get_started.html) as it contains useful guidelines on installation. Recent Linux distros come with suitable Clang already.
-  On Windows, the official LLVM package can be installed with:
-   ```powershell
-   winget install --id LLVM.LLVM --exact
-   ```
-  Generated Windows RISC-V projects set `LIBCLANG_PATH` to the official
-  installer's default location, `C:\Program Files\LLVM\bin`. Update that value
-  in `.cargo/config.toml` if LLVM is installed elsewhere.
 * Install the `nightly` Rust toolchain with the `rust-src` component included:
    ```sh
    rustup toolchain install nightly --component rust-src
    ```
-* Generated RISC-V projects pin `nightly` and `rust-src` in
-  `rust-toolchain.toml`, so ordinary `cargo` commands use the correct
-  toolchain automatically. Outside a generated project, use the `nightly`
-  [toolchain override](https://rust-lang.github.io/rustup/overrides.html#overrides),
-  i.e. `cargo +nightly ...`.
 
 ### Install Python3
 
@@ -267,11 +255,17 @@ python -m esp_idf_monitor [-p your-com-port-eg-`dev/ttyUSB0`] --toolchain-prefix
 
 For other RISCV SOCs like e.g. ESP32-C6 you only need to change the `--target` to `esp32c6`, but the toolchain prefix (and thus GDB itself) would remain the same.
 
-## Using WSL2 on Windows
+## Developing on Windows
 
-Using WSL2 does not exhibit [path length issues](https://github.com/esp-rs/esp-idf-sys/issues/252); furthermore, using WSL2 reduces the waiting time between command line cargo invocations and Rust Analyzer operating on the same projects.
+Windows [path length limits](https://github.com/esp-rs/esp-idf-sys/issues/252)
+can break ESP-IDF builds. You can develop on Windows in either of two ways:
 
-### Native Windows builds
+1. **Native Windows** — build directly on Windows with short paths under
+   `C:\e\...` (requires Cargo 1.91 or newer)
+2. **WSL2** — develop inside Linux, which avoids path-length issues and often
+   feels snappier when Cargo and Rust Analyzer share the same project
+
+### Native Windows
 
 Projects generated on Windows use Cargo's separate
 [`build-dir`](https://doc.rust-lang.org/cargo/reference/build-cache.html) for
@@ -281,32 +275,33 @@ intermediate artifacts:
 C:\e\<project-id>
 ```
 
-This keeps ESP-IDF's deeply nested CMake and build-script files close to the
-drive root while final artifacts remain in the project's normal `target`
-directory. The generated five-character project fingerprint prevents projects
-from sharing intermediate artifacts accidentally while keeping the complete
-build root within `esp-idf-sys`'s ten-character limit.
+That keeps nested build files close to the drive root, while final artifacts
+still land in the project's normal `target` directory. Each project gets its
+own short fingerprint so builds stay isolated.
 
-The default managed ESP-IDF installation is also placed at:
+The default managed ESP-IDF installation is also placed at a short path:
 
 ```text
 C:\e\idf
 ```
 
-ESP-IDF repeats its installation path many times in `linker_args.txt`.
-Keeping that path short prevents `ldproxy` from expanding the response file
-into a command longer than Windows' 32,767-character process limit. The
-installation is shared safely: managed ESP-IDF and tool versions use separate
-subdirectories. Choosing the advanced `global` installation option preserves
-that choice instead.
+A short ESP-IDF path avoids hitting Windows' command-length limits during
+linking. The installation is shared across projects; choosing the advanced
+`global` option keeps that choice instead.
 
-This requires Cargo 1.91 or newer. If Windows does not allow Cargo to create
-`C:\e`, create it once from an elevated terminal and grant your user write
-access, or change `build-dir` in `.cargo/config.toml` to another short,
-physical directory. A `subst` drive, junction, or symlink is not sufficient
-because path canonicalization can reveal the original long path.
+If Windows does not allow Cargo to create `C:\e`, create it once from an
+elevated terminal and grant your user write access, or point `build-dir` in
+`.cargo/config.toml` at another short, physical directory. A `subst` drive,
+junction, or symlink is not enough — path canonicalization can still expose
+the original long path.
 
-### Setup
+### Using WSL2
+
+WSL2 avoids the path-length problems above. It can also reduce the wait between
+command-line Cargo invocations and Rust Analyzer when both operate on the same
+project.
+
+#### Setup
 
 1. Follow the [WSL2 setup guide](https://learn.microsoft.com/en-us/windows/wsl/install) and the [WSL2 development environment setup guide](https://learn.microsoft.com/en-gb/windows/wsl/setup/environment#file-storage).
 2. Install a Linux distro as per the guide or the Ubuntu App; set up and update the packages.
@@ -319,7 +314,7 @@ because path canonicalization can reveal the original long path.
       sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/*-generic/usbip 20
       ```
 
-### Flashing an ESP32 Target from WSL2
+#### Flashing an ESP32 Target from WSL2
 
 1. Launch WSL2 from PowerShell and run your Linux distro or launch the Ubuntu app as installed from the Microsoft Store.
 2. Create a new project folder in your `$HOME` directory.
@@ -342,7 +337,7 @@ because path canonicalization can reveal the original long path.
     espflash monitor
     ```
 
-### Notes
+#### Notes
 
 - Once a USB device is bound, it won't lose status until a disconnect command is run from Windows PowerShell:
   ```powershell

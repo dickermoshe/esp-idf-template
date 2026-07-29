@@ -19,18 +19,13 @@ build-std = ["std", "panic_abort"]
 MCU = "{{ mcu }}"
 ESP_IDF_VERSION = "{{ espidfver }}"
 ESP_IDF_TOOLS_INSTALL_DIR = "{{ tools_install_dir }}"
-{%- if windows and arch == "riscv" %}
-# bindgen needs the shared library from the upstream LLVM installation.
-# This is the default location used by the official LLVM Windows installer.
-LIBCLANG_PATH = "C:/Program Files/LLVM/bin"
-{%- endif %}
 
 {%- if windows %}
 # build-dir is outside the project, so explicitly tell embuild where the
 # workspace and its sdkconfig.defaults are located.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
 {%- else %}
-# Uncomment this if you move the target dir by setting CARGO_TARGET_DIR or similar.
+# Uncomment this if you have moved the target dir by setting CARGO_TARGET_DIR or similar.
 # Required for now due to embuild limitations.
 #CARGO_WORKSPACE_DIR = { value = "", relative = true }
 {%- endif %}
